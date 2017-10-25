@@ -4,7 +4,7 @@ var z = require('zero-fill')
 module.exports = function container (get, set, clear) {
   return {
     name: 'martins_stoploss',
-    description: 'Buy when things are looking up, sell on profit or loss',
+    description: 'Buy when things are looking up, sell on profit or loss compared to peak',
 
     getOptions: function () {
       this.option('period', 'period length', String, '30m')
@@ -38,6 +38,13 @@ module.exports = function container (get, set, clear) {
         return cb()
       } 
 
+      if (typeof s.strategy_peak === 'undefined' || s.period.close >s.strategy_peak )
+      {
+        s.strategy_peak = s.period.close;
+        s.strategy_stoploss_price = s.period.close  *(1-s.options.loss_pct/100)
+
+      }
+
       if (s.strategy_state == 'holding' )
       {
 
@@ -60,9 +67,10 @@ module.exports = function container (get, set, clear) {
       if (s.strategy_state == 'looking')
       {
 
-        if (s.period.close > s.period.open * (1+s.options.buy_trigger_pct/100 ))
+        if (s.period.close > s.period.low * (1+s.options.buy_trigger_pct/100 ))
         {
             s.signal = 'buy'
+            s.strategy_peak = s.period.close;
             s.strategy_sell_price = s.period.close  * (1+s.options.profit_pct/100 )
             s.strategy_stoploss_price = s.period.close  *(1-s.options.loss_pct/100)
             s.strategy_state = "holding";
